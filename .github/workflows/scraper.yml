@@ -1,40 +1,25 @@
-name: Nicegram Scraper Bot
+name: Nicegram Scraper
 
-# متى يعمل هذا السكربت؟
 on:
   schedule:
-    # سيعمل تلقائياً عند الدقيقة 0 من كل ساعة (مرة كل ساعة)
-    - cron: '0 * * * *'
-  workflow_dispatch: # يتيح لك تشغيله يدوياً بضغطة زر
+    - cron: '0 * * * *' # تشغيل عند بداية كل ساعة
+  workflow_dispatch:
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    
-    # إعطاء صلاحية للسكربت لرفع الملفات الجديدة (CSV و Cursor) للمستودع
     permissions:
       contents: write
-
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-
-      - name: Install Requirements
-        run: pip install -r requirements.txt
-
-      - name: Run Scraper
-        run: python scraper.py
-
-      - name: Commit and Push Changes
+      - run: pip install requests
+      - run: python scraper.py
+      - name: Commit files
         run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git config --global user.name 'bot'
+          git config --global user.email 'bot@bot.com'
           git add channels_data.csv last_cursor.txt
-          # سيقوم برفع التحديثات فقط إذا كان هناك تغييرات
-          git diff --quiet && git diff --staged --quiet || git commit -m "Auto-update scraped channels"
-          git push
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update data" && git push)
