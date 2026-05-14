@@ -64,13 +64,11 @@ def scrape_nicegram():
                 break
                 
             # استخراج القنوات (ID, count, href, title)
-            # تم تحديث النمط ليكون أكثر دقة في سحب الـ ID
             channel_pattern = r'\\?"id\\?":\\?"(-?100\d+)\\?".*?\\?"count\\?":(\d+).*?\\?"href\\?":\\?"(/hub/channel/[^"\\]+)\\?".*?\\?"title\\?":\\?"([^"\\]+)\\?"'
             channels = re.findall(channel_pattern, content)
             
             if not channels:
                 print("No channels found on this page.")
-                # إذا لم يجد داتا، نحاول التأكد هل فعلا انتهى أم هناك خطأ
                 if "pagination" not in content:
                     cursor = "DONE"
                     break
@@ -79,27 +77,26 @@ def scrape_nicegram():
                 for ch_id, count, href, title in channels:
                     username = href.split("/")[-1]
                     link = f"https://t.me/{username}"
-                    # إزالة السالب من الـ ID
                     clean_id = ch_id.replace("-", "")
                     fixed_title = clean_text(title).strip()
-                    
                     writer.writerow([KEYWORD, fixed_title, link, count, clean_id])
                 file.flush()
 
-            # --- منطق الانتقال المطور ---
-            # البحث عن الصفحة النشطة حالياً
+            # --- منطق الانتقال المطور والآمن ---
             active_match = re.search(r'\\?"(\d+)\\?":\{[^}]*?is_active\\?":true', content)
             next_cursor = None
             
             if active_match:
                 current_page_num = int(active_match.group(1))
                 next_page_num = current_page_num + 1
-                # البحث عن كرسور الصفحة التالية (مثلاً الصفحة 2 إذا كنا في 1)
-                # النمط يبحث عن رقم الصفحة متبوعاً بالكرسور الخاص بها
-                cursor_pattern = fr'\\?"{next_page_num}\\?":\{{[^}]*?cursor\\?":\\?"([^"\\]+)\\?"'
+                
+                # تم إصلاح السطر الذي سبب خطأ f-string في الصورة 1000384343.jpg
+                # قمنا بفصل المتغير عن النص الخام (Raw String) لتجنب تداخل الأقواس
+                cursor_pattern = r'\\?"' + str(next_page_num) + r'\\?":\{[^}]*?cursor\\?":\\?"([^"\\]+)\\?"'
+                
                 next_cursor_match = re.search(cursor_pattern, content)
                 if next_cursor_match:
-                    next_cursor = next_page_match = next_cursor_match.group(1)
+                    next_cursor = next_cursor_match.group(1)
 
             if not next_cursor:
                 print("No more pages found (End of results).")
@@ -107,12 +104,11 @@ def scrape_nicegram():
                 break
                 
             cursor = next_cursor
-            # حفظ الكرسور فوراً في حالة توقف السكربت لأي سبب
             with open(CURSOR_FILE, "w", encoding="utf-8") as f:
                 f.write(cursor)
                 
             pages_scraped += 1
-            print(f"Moving to page {current_page_num + 1}...")
+            print(f"Moving to page {pages_scraped + 1}...")
             time.sleep(2)
 
     with open(CURSOR_FILE, "w", encoding="utf-8") as f:
